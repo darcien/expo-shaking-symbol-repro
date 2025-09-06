@@ -1,50 +1,103 @@
-# Welcome to your Expo app 👋
+# Expo Shaking Symbol Repro
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Minimal repro for prod bundling failure when
+`EXPO_UNSTABLE_METRO_OPTIMIZE_GRAPH` is enabled.
 
-## Get started
+`EXPO_UNSTABLE_METRO_OPTIMIZE_GRAPH` is enabled for [tree shaking](https://docs.expo.dev/guides/tree-shaking/).
 
-1. Install dependencies
+## Setup steps
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+Install dependencies
+```shell
+pnpm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Build JS bundle (any platform, this example use web)
+```shell
+pnpm build:web
+```
 
-## Learn more
+See error in build output
+```log
+| node:internal/child_process/serialization:114
+|     ser.writeValue(message);
+|         ^
+|
+| Error: Symbol() could not be cloned.
+|     at writeChannelMessage (node:internal/child_process/serialization:114:9)
+|     at target._send (node:internal/child_process:851:17)
+|     at target.send (node:internal/child_process:751:19)
+|     at reportSuccess (/Users/darcien/projects/expo-shaking-symbol-repro/node_modules/jest-worker/build/workers/processChild.js:82:11)
+|     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+Crash location:
+```js
+// node_modules/jest-worker/build/workers/processChild.js
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+function reportSuccess(result) {
+  if (!process || !process.send) {
+    throw new Error('Child can only be used on a forked process');
+  }
+  process.send([_types.PARENT_MESSAGE_OK, result]);
+  //      ^throws here
+}
+```
 
-## Join the community
+`result` does contain `Symbol()`.
+And it seems like an AST of a transformed source file.
+([./components/ui/button.tsx](./components/ui/button.tsx) in this case,
+but crash could also happens with other components).
 
-Join our community of developers creating universal apps.
+See [./result.js](./result.js) for the full JS object (Warning: it's almost 8K lines).
+And [./block.js](./block.js) for the small snippet containing the `Symbol()`.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```js
+// Snippet of the AST containing the Symbol()
+const node = {
+  type: "ExpressionStatement",
+  expression: {
+    type: "AssignmentExpression",
+    operator: "=",
+    left: {
+      type: "Identifier",
+      name: "props",
+    },
+    right: {
+      type: "Identifier",
+      name: "t3",
+      loc: Symbol(),
+    },
+  },
+}
+```
+
+```js
+// The code for that AST roughly looks like this:
+const { className, variant, size, ...t3 } = t0;
+props = t3; // <- This assignment creates the AST with Symbol()
+```
+
+```js
+// components/ui/button.tsx:95
+
+// Original code before transformed:
+function Button({ className, variant, size, ...props }: ButtonProps) {
+  // ...
+}
+```
+
+- Dev build or disabling `EXPO_UNSTABLE_METRO_OPTIMIZE_GRAPH` builds with no error.
+
+## Notes
+
+There are warnings from reanimated babel plugin during build,
+but they are safe to ignore for this repro.
+(Can disable the `nativewind/babel` and symbol error still happens.)
+
+```log
+| [Reanimated] Seems like you are using a Babel plugin `react-native-reanimated/plugin`. It was moved to `react-native-worklets` package. Please use `react-native-worklets/plugin` instead.
+```
+
+It's coming from `nativewind/babel` babel preset,
+already [fixed upstream](https://github.com/nativewind/nativewind/pull/1546) but unreleased.
