@@ -78,7 +78,7 @@ const { className, variant, size, ...t3 } = t0;
 props = t3; // <- This assignment creates the AST with Symbol()
 ```
 
-```js
+```tsx
 // components/ui/button.tsx:95
 
 // Original code before transformed:
@@ -88,6 +88,26 @@ function Button({ className, variant, size, ...props }: ButtonProps) {
 ```
 
 - Dev build or disabling `EXPO_UNSTABLE_METRO_OPTIMIZE_GRAPH` builds with no error.
+
+## Very minimal repro
+
+Ok, I've pinpointed the exact TS code that triggers the error:
+```tsx
+// components/ui/repro.tsx
+import { View, ViewProps } from "react-native";
+
+export type ReproProps = Pick<ViewProps, "id" | "role">;
+
+// If you do destructure and rest expression, it fails.
+export function Repro({ id, ...props }: ReproProps) {
+  return <View {...props} />;
+}
+
+// But not if you just do rest expression.
+export function NotRepro({ ...props }: ReproProps) {
+  return <View {...props} />;
+}
+```
 
 ## Notes
 

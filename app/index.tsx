@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Repro } from "@/components/ui/repro";
 import { Text } from "@/components/ui/text";
 import { View } from "react-native";
 
@@ -16,6 +17,7 @@ export default function Index() {
 
   return (
     <View className="justify-center items-center flex-1">
+      <Repro />
       <View className="gap-6">
         <Card className="border-border/0 sm:border-border shadow-none sm:shadow-sm sm:shadow-black/5">
           <CardHeader>
