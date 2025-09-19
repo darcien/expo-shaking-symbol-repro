@@ -1,1 +1,6 @@
 nodeLinker: hoisted
+# Uncomment these,
+# rerun `pnpm install` to apply patch,
+# and rerun `pnpm build:web` to see bundling now doesn't fail on Symbol() anymore.
+# patchedDependencies:
+#   babel-plugin-react-compiler: patches/babel-plugin-react-compiler.patch

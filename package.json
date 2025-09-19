@@ -8,7 +8,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web --clear",
     "lint": "expo lint",
-    "build:web": "expo export --platform web",
+    "build:web": "expo export --platform web --clear",
     "build:web:dev": "EXPO_ATLAS=true expo export --platform web --source-maps",
     "serve:prod": "pnpm run build:web:dev && expo serve",
     "analyze": "expo-atlas .expo/atlas.jsonl"

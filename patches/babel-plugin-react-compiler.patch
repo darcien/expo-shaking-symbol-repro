@@ -1,0 +1,13 @@
+diff --git a/dist/index.js b/dist/index.js
+index 8a08b06644e26120b4d07e95e8b1d0f559b48c00..d4c604e05c07c864f64ee37026ef61f0daa7c2be 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -67930,7 +67930,7 @@ function createTemporaryPlace(env, loc) {
+     identifier: makeTemporaryIdentifier(env.nextIdentifierId, loc),
+     reactive: false,
+     effect: "<unknown>" /* Unknown */,
+-    loc: GeneratedSource
++    loc: null
+   };
+ }
+ function clonePlaceToTemporary(env, place) {
